@@ -1,0 +1,84 @@
+#include <Wire.h>
+#include <DHT.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_GFX.h>
+
+#define DHT_PIN 2 
+#define DHT_TYPE DHT22
+
+#define MQ135_PIN A0  // Connect MQ135 sensor to analog pin A0
+
+DHT dht(DHT_PIN, DHT_TYPE);
+
+// OLED display dimensions
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+float TEMP_THRESHOLD_HIGH = 40.0;  
+float HUM_THRESHOLD_HIGH = 70.0;   
+float AMMONIA_THRESHOLD = 50.0;     
+
+void setup() {
+  Serial.begin(115200);  
+  dht.begin(); 
+
+  if (!display.begin(SSD1306_I2C_ADDRESS, SCREEN_WIDTH, SCREEN_HEIGHT)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;);  
+  }
+  display.display();    delay(2000); 
+  display.clearDisplay();  r
+}
+
+void loop() {
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+
+  int mq135Value = analogRead(MQ135_PIN); 
+  float ammoniaConcentration = map(mq135Value, 0, 1023, 0, 500); 
+  Serial.print("Temperature: ");
+  Serial.print(temperature);
+  Serial.print(" C, Humidity: ");
+  Serial.print(humidity);
+  Serial.print(" %, Ammonia Concentration: ");
+  Serial.print(ammoniaConcentration);
+  Serial.println(" ppm");
+
+  display.clearDisplay();
+
+  display.setTextSize(1);  
+  display.setTextColor(SSD1306_WHITE);  
+  display.setCursor(0, 0);  
+  display.print("Temp: ");
+  display.print(temperature);
+  display.println(" C");
+
+  display.print("Hum: ");
+  display.print(humidity);
+  display.println(" %");
+
+  display.print("Ammonia: ");
+  display.print(ammoniaConcentration);
+  display.println(" ppm");
+
+  // Check for high thresholds and display alerts on OLED
+  if (temperature > TEMP_THRESHOLD_HIGH) {
+    display.setCursor(0, 48);  // Move cursor to lower part of the screen
+    display.print("ALERT: High Temp!");
+  }
+
+  if (humidity > HUM_THRESHOLD_HIGH) {
+    display.setCursor(0, 40);  // Move cursor for alert
+    display.print("ALERT: High Humidity!");
+  }
+
+  if (ammoniaConcentration > AMMONIA_THRESHOLD) {
+    display.setCursor(0, 32);  // Move cursor for alert
+    display.print("ALERT: High Ammonia!");
+  }
+
+  display.display();  
+  delay(2000);  
+}
